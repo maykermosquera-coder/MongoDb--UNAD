@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MongoDB - Sistema de Ventas Tecnológicas | UNAD Big Data</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1a202c; }
+
+  /* NAV */
+  nav { background: #1F4E79; padding: 0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  .nav-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 0; overflow-x: auto; }
+  .nav-btn { color: #90b8d8; border: none; background: none; padding: 14px 18px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .nav-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  .nav-btn.active { color: #fff; border-bottom-color: #5BC0EB; background: rgba(255,255,255,0.1); }
+
+  /* SLIDES */
+  .slide { display: none; max-width: 1100px; margin: 0 auto; padding: 40px 24px 60px; }
+  .slide.active { display: block; }
+
+  /* HEADER */
+  .slide-header { margin-bottom: 32px; }
+  .slide-label { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; color: #2E75B6; text-transform: uppercase; margin-bottom: 6px; }
+  .slide-title { font-size: 32px; font-weight: 700; color: #1F4E79; line-height: 1.2; }
+  .slide-sub { font-size: 16px; color: #4a5568; margin-top: 8px; }
+  .divider { height: 3px; width: 60px; background: linear-gradient(90deg, #1F4E79, #5BC0EB); border-radius: 2px; margin: 16px 0 0; }
+
+  /* CARDS */
+  .card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 24px; }
+  .card-blue { background: #EBF4FF; border-color: #B5D4F4; }
+  .card-green { background: #EAF3DE; border-color: #C0DD97; }
+  .card-amber { background: #FAEEDA; border-color: #FAC775; }
+  .card-red { background: #FCEBEB; border-color: #F7C1C1; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* PORTADA */
+  .hero { background: linear-gradient(135deg, #1F4E79 0%, #2E75B6 60%, #5BC0EB 100%); border-radius: 16px; padding: 60px 48px; color: #fff; margin-bottom: 32px; }
+  .hero-unad { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.75; margin-bottom: 12px; }
+  .hero-title { font-size: 38px; font-weight: 700; line-height: 1.2; margin-bottom: 16px; }
+  .hero-sub { font-size: 18px; opacity: 0.85; margin-bottom: 8px; }
+  .hero-meta { font-size: 14px; opacity: 0.65; margin-top: 24px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .badge { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 6px 16px; font-size: 13px; color: #fff; }
+
+  /* STAT CARDS */
+  .stat { text-align: center; padding: 20px 16px; }
+  .stat-num { font-size: 36px; font-weight: 700; color: #1F4E79; }
+  .stat-label { font-size: 13px; color: #718096; margin-top: 4px; }
+
+  /* SCHEMA */
+  .schema-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .schema-table th { background: #1F4E79; color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; }
+  .schema-table td { padding: 9px 14px; border-bottom: 1px solid #e2e8f0; }
+  .schema-table tr:nth-child(even) td { background: #f7fafc; }
+  .schema-table tr:hover td { background: #EBF4FF; }
+  .field-name { font-family: 'Courier New', monospace; font-weight: 600; color: #1F4E79; background: #EBF4FF; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  .type-badge { display: inline-block; background: #EAF3DE; color: #3B6D11; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .pk-badge { display: inline-block; background: #FAEEDA; color: #854F0B; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 4px; }
+
+  /* CODE */
+  .code-block { background: #1a202c; color: #e2e8f0; border-radius: 10px; padding: 20px 24px; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.8; overflow-x: auto; position: relative; margin: 12px 0; }
+  .code-label { position: absolute; top: 10px; right: 14px; font-size: 11px; color: #4a5568; font-family: Arial, sans-serif; font-weight: 600; letter-spacing: 1px; }
+  .kw { color: #F6AD55; } /* keywords */
+  .fn { color: #68D391; } /* function names */
+  .str { color: #FC8181; } /* strings */
+  .num { color: #90CDF4; } /* numbers */
+  .cmt { color: #718096; font-style: italic; }
+  .op { color: #B794F4; } /* operators */
+  .key { color: #FBD38D; } /* keys */
+
+  /* RESULT BOX */
+  .result-box { background: #f0fff4; border: 1px solid #C0DD97; border-radius: 8px; padding: 14px 18px; font-family: 'Courier New', monospace; font-size: 13px; color: #27500A; margin-top: 8px; line-height: 1.7; }
+  .result-label { font-family: Arial, sans-serif; font-size: 12px; font-weight: 600; color: #3B6D11; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+
+  /* SECTION TITLE */
+  .section-title { font-size: 18px; font-weight: 700; color: #1F4E79; margin: 28px 0 12px; display: flex; align-items: center; gap: 10px; }
+  .section-title::before { content: ''; display: block; width: 4px; height: 20px; background: #2E75B6; border-radius: 2px; }
+
+  /* INFO BOXES */
+  .info-box { border-left: 4px solid #2E75B6; background: #EBF4FF; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 12px 0; font-size: 14px; color: #1F4E79; }
+  .warn-box { border-left: 4px solid #EF9F27; background: #FAEEDA; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 12px 0; font-size: 14px; color: #633806; }
+
+  /* ARROW DIAGRAM */
+  .diagram { display: flex; align-items: center; justify-content: center; gap: 0; flex-wrap: wrap; margin: 24px 0; }
+  .d-box { background: #fff; border: 2px solid #B5D4F4; border-radius: 10px; padding: 16px 20px; text-align: center; min-width: 140px; }
+  .d-box-title { font-weight: 700; font-size: 15px; color: #1F4E79; }
+  .d-box-sub { font-size: 12px; color: #4a5568; margin-top: 4px; }
+  .d-arrow { font-size: 24px; color: #2E75B6; margin: 0 8px; }
+  .d-join { background: #FAEEDA; border-color: #FAC775; }
+  .d-join .d-box-title { color: #633806; }
+
+  /* FOOTER NAV */
+  .foot-nav { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+  .foot-btn { background: #1F4E79; color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+  .foot-btn:hover { background: #2E75B6; }
+  .foot-btn.secondary { background: #f0f4f8; color: #1F4E79; border: 1px solid #B5D4F4; }
+  .foot-btn.secondary:hover { background: #EBF4FF; }
+
+  /* PROGRESS */
+  .progress-bar { height: 3px; background: #e2e8f0; position: sticky; top: 48px; z-index: 99; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #1F4E79, #5BC0EB); transition: width 0.3s; }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .hero { padding: 32px 24px; }
+    .hero-title { font-size: 26px; }
+    .slide { padding: 24px 16px 48px; }
+    .diagram { flex-direction: column; }
+    .d-arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <button class="nav-btn active" onclick="goTo(0)">Portada</button>
+    <button class="nav-btn" onclick="goTo(1)">Caso de uso</button>
+    <button class="nav-btn" onclick="goTo(2)">Esquema</button>
+    <button class="nav-btn" onclick="goTo(3)">Inserción</button>
+    <button class="nav-btn" onclick="goTo(4)">Selección</button>
+    <button class="nav-btn" onclick="goTo(5)">Actualización</button>
+    <button class="nav-btn" onclick="goTo(6)">Eliminación</button>
+    <button class="nav-btn" onclick="goTo(7)">Filtros & JOIN</button>
+    <button class="nav-btn" onclick="goTo(8)">Agregaciones</button>
+    <button class="nav-btn" onclick="goTo(9)">Conclusiones</button>
+  </div>
+</nav>
+<div class="progress-bar"><div class="progress-fill" id="prog" style="width:10%"></div></div>
+
+<!-- SLIDE 0: PORTADA -->
+<div class="slide active" id="s0">
+  <div class="hero">
+    <div class="hero-unad">Universidad Nacional Abierta y a Distancia &nbsp;·&nbsp; UNAD</div>
+    <div class="hero-title">Almacenamiento y Consultas<br>de Datos en Big Data</div>
+    <div class="hero-sub">Tarea 4 · Fase 2: Implementación en MongoDB</div>
+    <div class="badge-row">
+      <span class="badge">Curso: Big Data</span>
+      <span class="badge">Código: 202016911</span>
+      <span class="badge">Abril 2026</span>
+      <span class="badge">NoSQL · MongoDB</span>
+    </div>
+    <div class="hero-meta">Caso de uso: Sistema de Ventas de Tienda Tecnológica</div>
+  </div>
+  <div class="grid-4">
+    <div class="card stat"><div class="stat-num">3</div><div class="stat-label">Colecciones</div></div>
+    <div class="card stat"><div class="stat-num">100+</div><div class="stat-label">Documentos insertados</div></div>
+    <div class="card stat"><div class="stat-num">8</div><div class="stat-label">Tipos de consultas</div></div>
+    <div class="card stat"><div class="stat-num">5</div><div class="stat-label">Agregaciones</div></div>
+  </div>
+  <div class="foot-nav"><span></span><button class="foot-btn" onclick="goTo(1)">Siguiente →</button></div>
+</div>
+
+<!-- SLIDE 1: CASO DE USO -->
+<div class="slide" id="s1">
+  <div class="slide-header">
+    <div class="slide-label">Slide 1 de 9</div>
+    <div class="slide-title">Caso de uso seleccionado</div>
+    <div class="slide-sub">Sistema de ventas de una tienda tecnológica</div>
+    <div class="divider"></div>
+  </div>
+  <div class="info-box">MongoDB es ideal para este caso porque permite almacenar documentos flexibles de ventas con datos anidados, y escala fácilmente ante grandes volúmenes de transacciones.</div>
+  <div class="grid-2" style="margin-top:20px">
+    <div class="card card-blue">
+      <div style="font-size:13px;font-weight:700;color:#1F4E79;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">¿Qué registra?</div>
+      <ul style="padding-left:18px;font-size:14px;color:#2d3748;line-height:2">
+        <li>Transacciones de venta diarias</li>
+        <li>Catálogo de productos tecnológicos</li>
+        <li>Información de clientes</li>
+        <li>Ventas por ciudad y categoría</li>
+        <li>Totales y estadísticas de ingresos</li>
+      </ul>
+    </div>
+    <div class="card card-green">
+      <div style="font-size:13px;font-weight:700;color:#3B6D11;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">¿Por qué MongoDB?</div>
+      <ul style="padding-left:18px;font-size:14px;color:#2d3748;line-height:2">
+        <li>Esquema flexible (documentos JSON)</li>
+        <li>Consultas rápidas sobre grandes volúmenes</li>
+        <li>Agregaciones potentes para reportes</li>
+        <li>Escalado horizontal nativo</li>
+        <li>Sin necesidad de JOINs complejos</li>
+      </ul>
+    </div>
+  </div>
+  <div class="section-title">Flujo del sistema</div>
+  <div class="diagram">
+    <div class="d-box"><div class="d-box-title">Cliente</div><div class="d-box-sub">5 clientes registrados</div></div>
+    <div class="d-arrow">→</div>
+    <div class="d-box d-join"><div class="d-box-title">Venta</div><div class="d-box-sub">100 transacciones</div></div>
+    <div class="d-arrow">→</div>
+    <div class="d-box"><div class="d-box-title">Producto</div><div class="d-box-sub">8 productos</div></div>
+    <div class="d-arrow">→</div>
+    <div class="d-box" style="background:#EAF3DE;border-color:#C0DD97"><div class="d-box-title" style="color:#27500A">Reporte</div><div class="d-box-sub">Estadísticas y análisis</div></div>
+  </div>
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(0)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(2)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 2: ESQUEMA -->
+<div class="slide" id="s2">
+  <div class="slide-header">
+    <div class="slide-label">Slide 2 de 9</div>
+    <div class="slide-title">Diseño del esquema</div>
+    <div class="slide-sub">Base de datos: <code style="background:#EBF4FF;color:#1F4E79;padding:2px 8px;border-radius:4px;font-size:15px">ventas_db</code> · 3 colecciones</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-title">Colección: productos</div>
+  <table class="schema-table">
+    <tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr>
+    <tr><td><span class="field-name">_id</span> <span class="pk-badge">PK</span></td><td><span class="type-badge">Number</span></td><td>Identificador único del producto</td></tr>
+    <tr><td><span class="field-name">producto</span></td><td><span class="type-badge">String</span></td><td>Nombre del producto (ej: Laptop, Mouse)</td></tr>
+    <tr><td><span class="field-name">categoria</span></td><td><span class="type-badge">String</span></td><td>Categoría: Cómputo, Accesorios, Oficina, Redes</td></tr>
+    <tr><td><span class="field-name">precio</span></td><td><span class="type-badge">Number</span></td><td>Precio unitario en pesos colombianos (COP)</td></tr>
+  </table>
+
+  <div class="section-title">Colección: clientes</div>
+  <table class="schema-table">
+    <tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr>
+    <tr><td><span class="field-name">_id</span> <span class="pk-badge">PK</span></td><td><span class="type-badge">Number</span></td><td>Identificador único del cliente</td></tr>
+    <tr><td><span class="field-name">nombre</span></td><td><span class="type-badge">String</span></td><td>Nombre completo del cliente</td></tr>
+    <tr><td><span class="field-name">ciudad</span></td><td><span class="type-badge">String</span></td><td>Ciudad de residencia</td></tr>
+  </table>
+
+  <div class="section-title">Colección: ventas (colección principal)</div>
+  <table class="schema-table">
+    <tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr>
+    <tr><td><span class="field-name">id_venta</span> <span class="pk-badge">PK</span></td><td><span class="type-badge">Number</span></td><td>Número secuencial de la venta</td></tr>
+    <tr><td><span class="field-name">fecha</span></td><td><span class="type-badge">Date</span></td><td>Fecha de la transacción</td></tr>
+    <tr><td><span class="field-name">id_producto</span></td><td><span class="type-badge">Number</span></td><td>Referencia al _id de la colección productos</td></tr>
+    <tr><td><span class="field-name">producto</span></td><td><span class="type-badge">String</span></td><td>Nombre del producto vendido</td></tr>
+    <tr><td><span class="field-name">categoria</span></td><td><span class="type-badge">String</span></td><td>Categoría del producto</td></tr>
+    <tr><td><span class="field-name">ciudad</span></td><td><span class="type-badge">String</span></td><td>Ciudad donde se realizó la venta</td></tr>
+    <tr><td><span class="field-name">id_cliente</span></td><td><span class="type-badge">Number</span></td><td>Referencia al _id de la colección clientes</td></tr>
+    <tr><td><span class="field-name">cantidad</span></td><td><span class="type-badge">Number</span></td><td>Unidades vendidas (1 a 5)</td></tr>
+    <tr><td><span class="field-name">precio_unitario</span></td><td><span class="type-badge">Number</span></td><td>Precio por unidad en COP</td></tr>
+    <tr><td><span class="field-name">total</span></td><td><span class="type-badge">Number</span></td><td>Total = cantidad × precio_unitario</td></tr>
+  </table>
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(1)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(3)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 3: INSERCIÓN -->
+<div class="slide" id="s3">
+  <div class="slide-header">
+    <div class="slide-label">Slide 3 de 9 · Consultas básicas</div>
+    <div class="slide-title">Inserción de documentos</div>
+    <div class="slide-sub">insertOne() e insertMany() — creación de registros en MongoDB</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-title">Seleccionar base de datos</div>
+  <div class="code-block"><span class="cmt"># Crear/seleccionar la base de datos</span>
+<span class="kw">use</span> ventas_db</div>
+
+  <div class="section-title">Insertar colección de productos (insertMany)</div>
+  <div class="code-block"><span class="cmt">// Insertar 8 productos con insertMany()</span>
+db.<span class="fn">productos</span>.<span class="fn">insertMany</span>([
+  { <span class="key">_id</span>: <span class="num">1</span>, <span class="key">producto</span>: <span class="str">"Laptop"</span>,    <span class="key">categoria</span>: <span class="str">"Computo"</span>,    <span class="key">precio</span>: <span class="num">2500000</span> },
+  { <span class="key">_id</span>: <span class="num">2</span>, <span class="key">producto</span>: <span class="str">"Mouse"</span>,     <span class="key">categoria</span>: <span class="str">"Accesorios"</span>, <span class="key">precio</span>: <span class="num">50000</span>   },
+  { <span class="key">_id</span>: <span class="num">3</span>, <span class="key">producto</span>: <span class="str">"Teclado"</span>,   <span class="key">categoria</span>: <span class="str">"Accesorios"</span>, <span class="key">precio</span>: <span class="num">120000</span>  },
+  { <span class="key">_id</span>: <span class="num">4</span>, <span class="key">producto</span>: <span class="str">"Monitor"</span>,   <span class="key">categoria</span>: <span class="str">"Computo"</span>,    <span class="key">precio</span>: <span class="num">800000</span>  },
+  { <span class="key">_id</span>: <span class="num">5</span>, <span class="key">producto</span>: <span class="str">"Impresora"</span>, <span class="key">categoria</span>: <span class="str">"Oficina"</span>,    <span class="key">precio</span>: <span class="num">650000</span>  },
+  { <span class="key">_id</span>: <span class="num">6</span>, <span class="key">producto</span>: <span class="str">"USB 64GB"</span>, <span class="key">categoria</span>: <span class="str">"Accesorios"</span>, <span class="key">precio</span>: <span class="num">35000</span>   },
+  { <span class="key">_id</span>: <span class="num">7</span>, <span class="key">producto</span>: <span class="str">"Router"</span>,    <span class="key">categoria</span>: <span class="str">"Redes"</span>,      <span class="key">precio</span>: <span class="num">220000</span>  },
+  { <span class="key">_id</span>: <span class="num">8</span>, <span class="key">producto</span>: <span class="str">"Cable UTP"</span>, <span class="key">categoria</span>: <span class="str">"Redes"</span>,      <span class="key">precio</span>: <span class="num">2500</span>    }
+])</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ acknowledged: true, insertedIds: { '0': 1, '1': 2, '2': 3, '3': 4, '4': 5, '5': 6, '6': 7, '7': 8 } }</div>
+
+  <div class="section-title">Insertar 100 documentos de ventas (generados automáticamente)</div>
+  <div class="code-block"><span class="cmt">// Generación automática de 100 ventas con bucle for</span>
+<span class="kw">const</span> productos = [
+  { <span class="key">id</span>: <span class="num">1</span>, <span class="key">producto</span>: <span class="str">"Laptop"</span>,    <span class="key">categoria</span>: <span class="str">"Computo"</span>,    <span class="key">precio</span>: <span class="num">2500000</span> },
+  { <span class="key">id</span>: <span class="num">2</span>, <span class="key">producto</span>: <span class="str">"Mouse"</span>,     <span class="key">categoria</span>: <span class="str">"Accesorios"</span>, <span class="key">precio</span>: <span class="num">50000</span>   },
+  <span class="cmt">// ... (8 productos total)</span>
+];
+<span class="kw">const</span> ciudades = [<span class="str">"Pereira"</span>, <span class="str">"Medellín"</span>, <span class="str">"Manizales"</span>, <span class="str">"Quibdó"</span>];
+<span class="kw">const</span> ventas = [];
+
+<span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">1</span>; i &lt;= <span class="num">100</span>; i++) {
+  <span class="kw">const</span> p = productos[Math.<span class="fn">floor</span>(Math.<span class="fn">random</span>() * productos.length)];
+  <span class="kw">const</span> cantidad = Math.<span class="fn">floor</span>(Math.<span class="fn">random</span>() * <span class="num">5</span>) + <span class="num">1</span>;
+  ventas.<span class="fn">push</span>({
+    <span class="key">id_venta</span>: i,
+    <span class="key">fecha</span>: <span class="kw">new</span> <span class="fn">Date</span>(<span class="num">2026</span>, <span class="num">0</span>, (i % <span class="num">28</span>) + <span class="num">1</span>),
+    <span class="key">id_producto</span>: p.id,
+    <span class="key">producto</span>: p.producto,    <span class="key">categoria</span>: p.categoria,
+    <span class="key">ciudad</span>: ciudades[Math.<span class="fn">floor</span>(Math.<span class="fn">random</span>() * ciudades.length)],
+    <span class="key">id_cliente</span>: Math.<span class="fn">floor</span>(Math.<span class="fn">random</span>() * <span class="num">5</span>) + <span class="num">1</span>,
+    <span class="key">cantidad</span>: cantidad,
+    <span class="key">precio_unitario</span>: p.precio,
+    <span class="key">total</span>: cantidad * p.precio
+  });
+}
+db.<span class="fn">ventas</span>.<span class="fn">insertMany</span>(ventas);
+db.<span class="fn">ventas</span>.<span class="fn">countDocuments</span>()</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">100</div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(2)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(4)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 4: SELECCIÓN -->
+<div class="slide" id="s4">
+  <div class="slide-header">
+    <div class="slide-label">Slide 4 de 9 · Consultas básicas</div>
+    <div class="slide-title">Selección de documentos</div>
+    <div class="slide-sub">find() — consultar y proyectar documentos de la colección</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-title">Ver todos los documentos</div>
+  <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">find</span>().<span class="fn">pretty</span>()</div>
+  <div class="result-label">Resultado (ejemplo de 1 documento)</div>
+  <div class="result-box">{
+  _id: ObjectId('...'),
+  id_venta: 1,
+  fecha: ISODate('2026-01-02T00:00:00.000Z'),
+  id_producto: 3,
+  producto: 'Teclado',
+  categoria: 'Accesorios',
+  ciudad: 'Pereira',
+  id_cliente: 2,
+  cantidad: 4,
+  precio_unitario: 120000,
+  total: 480000
+}</div>
+
+  <div class="section-title">Selección con proyección (solo algunos campos)</div>
+  <div class="code-block"><span class="cmt">// Mostrar solo producto, ciudad y total. El 1 incluye, 0 excluye.</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>({}, { <span class="key">producto</span>: <span class="num">1</span>, <span class="key">ciudad</span>: <span class="num">1</span>, <span class="key">total</span>: <span class="num">1</span>, <span class="key">_id</span>: <span class="num">0</span> })</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ producto: 'Teclado',   ciudad: 'Pereira',   total: 480000  }
+{ producto: 'Laptop',    ciudad: 'Medellín',  total: 7500000 }
+{ producto: 'Mouse',     ciudad: 'Quibdó',    total: 100000  }
+<span style="color:#639922">// ... (100 documentos en total)</span></div>
+
+  <div class="section-title">Selección con límite y orden</div>
+  <div class="code-block"><span class="cmt">// Ver las 5 ventas de mayor valor</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>({}, { <span class="key">producto</span>: <span class="num">1</span>, <span class="key">total</span>: <span class="num">1</span>, <span class="key">ciudad</span>: <span class="num">1</span>, <span class="key">_id</span>: <span class="num">0</span> })
+         .<span class="fn">sort</span>({ <span class="key">total</span>: <span class="op">-1</span> })
+         .<span class="fn">limit</span>(<span class="num">5</span>)</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ producto: 'Laptop', ciudad: 'Medellín',  total: 12500000 }
+{ producto: 'Laptop', ciudad: 'Pereira',   total: 10000000 }
+{ producto: 'Laptop', ciudad: 'Quibdó',    total: 7500000  }
+{ producto: 'Monitor', ciudad: 'Pereira',  total: 4000000  }
+{ producto: 'Monitor', ciudad: 'Manizales',total: 3200000  }</div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(3)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(5)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 5: ACTUALIZACIÓN -->
+<div class="slide" id="s5">
+  <div class="slide-header">
+    <div class="slide-label">Slide 5 de 9 · Consultas básicas</div>
+    <div class="slide-title">Actualización de documentos</div>
+    <div class="slide-sub">updateOne() y updateMany() — modificar documentos existentes</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-title">Actualizar un solo documento (updateOne)</div>
+  <div class="code-block"><span class="cmt">// Actualizar el precio de la Laptop a $2.700.000</span>
+db.<span class="fn">productos</span>.<span class="fn">updateOne</span>(
+  { <span class="key">_id</span>: <span class="num">1</span> },
+  { <span class="op">$set</span>: { <span class="key">precio</span>: <span class="num">2700000</span> } }
+)</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{
+  acknowledged: true,
+  matchedCount: 1,
+  modifiedCount: 1,
+  upsertedId: null
+}</div>
+
+  <div class="section-title">Actualizar múltiples documentos (updateMany)</div>
+  <div class="code-block"><span class="cmt">// Aplicar descuento del 10% a todos los productos de Accesorios</span>
+db.<span class="fn">productos</span>.<span class="fn">updateMany</span>(
+  { <span class="key">categoria</span>: <span class="str">"Accesorios"</span> },
+  { <span class="op">$mul</span>: { <span class="key">precio</span>: <span class="num">0.9</span> } }
+)</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{
+  acknowledged: true,
+  matchedCount: 3,
+  modifiedCount: 3
+}
+<span style="color:#639922">// Mouse: 50000 → 45000 | Teclado: 120000 → 108000 | USB: 35000 → 31500</span></div>
+
+  <div class="section-title">Agregar un campo nuevo a un documento</div>
+  <div class="code-block"><span class="cmt">// Agregar campo "stock" al producto Monitor</span>
+db.<span class="fn">productos</span>.<span class="fn">updateOne</span>(
+  { <span class="key">_id</span>: <span class="num">4</span> },
+  { <span class="op">$set</span>: { <span class="key">stock</span>: <span class="num">15</span>, <span class="key">en_oferta</span>: <span class="kw">false</span> } }
+)</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ acknowledged: true, matchedCount: 1, modifiedCount: 1 }
+<span style="color:#639922">// El documento Monitor ahora tiene los campos stock:15 y en_oferta:false</span></div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(4)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(6)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 6: ELIMINACIÓN -->
+<div class="slide" id="s6">
+  <div class="slide-header">
+    <div class="slide-label">Slide 6 de 9 · Consultas básicas</div>
+    <div class="slide-title">Eliminación de documentos</div>
+    <div class="slide-sub">deleteOne() y deleteMany() — borrar registros de la colección</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="section-title">Insertar documento de prueba para luego eliminarlo</div>
+  <div class="code-block"><span class="cmt">// Insertar venta de prueba (id_venta: 101)</span>
+db.<span class="fn">ventas</span>.<span class="fn">insertOne</span>({
+  <span class="key">id_venta</span>: <span class="num">101</span>, <span class="key">fecha</span>: <span class="kw">new</span> <span class="fn">Date</span>(<span class="num">2026</span>, <span class="num">0</span>, <span class="num">30</span>),
+  <span class="key">id_producto</span>: <span class="num">1</span>, <span class="key">producto</span>: <span class="str">"Laptop"</span>, <span class="key">categoria</span>: <span class="str">"Computo"</span>,
+  <span class="key">ciudad</span>: <span class="str">"Bogotá"</span>, <span class="key">id_cliente</span>: <span class="num">3</span>,
+  <span class="key">cantidad</span>: <span class="num">2</span>, <span class="key">precio_unitario</span>: <span class="num">2500000</span>, <span class="key">total</span>: <span class="num">5000000</span>
+})</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ acknowledged: true, insertedId: ObjectId('...') }</div>
+
+  <div class="section-title">Eliminar un documento (deleteOne)</div>
+  <div class="code-block"><span class="cmt">// Eliminar la venta de prueba con id_venta = 101</span>
+db.<span class="fn">ventas</span>.<span class="fn">deleteOne</span>({ <span class="key">id_venta</span>: <span class="num">101</span> })</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ acknowledged: true, deletedCount: 1 }</div>
+
+  <div class="section-title">Eliminar múltiples documentos (deleteMany)</div>
+  <div class="code-block"><span class="cmt">// Eliminar todas las ventas con total menor a $10.000 (ventas mínimas)</span>
+db.<span class="fn">ventas</span>.<span class="fn">deleteMany</span>({ <span class="key">total</span>: { <span class="op">$lt</span>: <span class="num">10000</span> } })</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ acknowledged: true, deletedCount: 3 }
+<span style="color:#639922">// Se eliminaron 3 ventas de Cable UTP con cantidad = 1 (total: 2500)</span></div>
+
+  <div class="warn-box">Importante: deleteMany() sin filtro elimina TODOS los documentos. Siempre verificar el filtro con find() antes de ejecutar el deleteMany().</div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(5)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(7)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 7: FILTROS Y JOIN -->
+<div class="slide" id="s7">
+  <div class="slide-header">
+    <div class="slide-label">Slide 7 de 9</div>
+    <div class="slide-title">Filtros, operadores y JOIN</div>
+    <div class="slide-sub">Consultas avanzadas con operadores de comparación y $lookup</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div>
+      <div class="section-title">Filtro por ciudad</div>
+      <div class="code-block"><span class="cmt">// Ventas realizadas en Medellín</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>({ <span class="key">ciudad</span>: <span class="str">"Medellín"</span> })</div>
+    </div>
+    <div>
+      <div class="section-title">Filtro por monto ($gt)</div>
+      <div class="code-block"><span class="cmt">// Ventas con total > $500.000</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>(
+  { <span class="key">total</span>: { <span class="op">$gt</span>: <span class="num">500000</span> } },
+  { <span class="key">producto</span>:<span class="num">1</span>, <span class="key">total</span>:<span class="num">1</span>, <span class="key">_id</span>:<span class="num">0</span> }
+)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Filtro combinado (categoría + monto)</div>
+  <div class="code-block"><span class="cmt">// Ventas de Cómputo con total > $1.000.000</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>(
+  { <span class="key">categoria</span>: <span class="str">"Computo"</span>, <span class="key">total</span>: { <span class="op">$gt</span>: <span class="num">1000000</span> } },
+  { <span class="key">producto</span>: <span class="num">1</span>, <span class="key">total</span>: <span class="num">1</span>, <span class="key">ciudad</span>: <span class="num">1</span>, <span class="key">_id</span>: <span class="num">0</span> }
+)</div>
+
+  <div class="section-title">Filtro con $in (múltiples valores)</div>
+  <div class="code-block"><span class="cmt">// Ventas en Pereira o Quibdó</span>
+db.<span class="fn">ventas</span>.<span class="fn">find</span>({ <span class="key">ciudad</span>: { <span class="op">$in</span>: [<span class="str">"Pereira"</span>, <span class="str">"Quibdó"</span>] } })</div>
+
+  <div class="section-title">JOIN con $lookup — ventas + clientes</div>
+  <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">aggregate</span>([
+  {
+    <span class="op">$lookup</span>: {
+      <span class="key">from</span>: <span class="str">"clientes"</span>,
+      <span class="key">localField</span>: <span class="str">"id_cliente"</span>,
+      <span class="key">foreignField</span>: <span class="str">"_id"</span>,
+      <span class="key">as</span>: <span class="str">"info_cliente"</span>
+    }
+  },
+  { <span class="op">$unwind</span>: <span class="str">"$info_cliente"</span> },
+  {
+    <span class="op">$project</span>: {
+      <span class="key">id_venta</span>: <span class="num">1</span>, <span class="key">producto</span>: <span class="num">1</span>, <span class="key">total</span>: <span class="num">1</span>,
+      <span class="str">"info_cliente.nombre"</span>: <span class="num">1</span>,
+      <span class="str">"info_cliente.ciudad"</span>: <span class="num">1</span>,
+      <span class="key">_id</span>: <span class="num">0</span>
+    }
+  }
+])</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ id_venta: 1, producto: 'Teclado', total: 480000, info_cliente: { nombre: 'Carlos López', ciudad: 'Medellín' } }
+{ id_venta: 2, producto: 'Laptop',  total: 7500000, info_cliente: { nombre: 'Ana García',   ciudad: 'Pereira'   } }
+<span style="color:#639922">// ... (100 documentos enriquecidos con datos del cliente)</span></div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(6)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(8)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 8: AGREGACIONES -->
+<div class="slide" id="s8">
+  <div class="slide-header">
+    <div class="slide-label">Slide 8 de 9</div>
+    <div class="slide-title">Consultas de agregación</div>
+    <div class="slide-sub">Contar, sumar y promediar con el pipeline de agregación</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="section-title">Contar ventas por ciudad</div>
+      <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">aggregate</span>([
+  { <span class="op">$group</span>: {
+      <span class="key">_id</span>: <span class="str">"$ciudad"</span>,
+      <span class="key">total_ventas</span>: { <span class="op">$sum</span>: <span class="num">1</span> }
+  }},
+  { <span class="op">$sort</span>: { <span class="key">total_ventas</span>: <span class="op">-1</span> } }
+])</div>
+      <div class="result-label">Resultado</div>
+      <div class="result-box">{ _id: 'Pereira',   total_ventas: 28 }
+{ _id: 'Medellín', total_ventas: 26 }
+{ _id: 'Quibdó',   total_ventas: 24 }
+{ _id: 'Manizales',total_ventas: 22 }</div>
+    </div>
+    <div>
+      <div class="section-title">Sumar ingresos por categoría</div>
+      <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">aggregate</span>([
+  { <span class="op">$group</span>: {
+      <span class="key">_id</span>: <span class="str">"$categoria"</span>,
+      <span class="key">total_ingresos</span>: { <span class="op">$sum</span>: <span class="str">"$total"</span> },
+      <span class="key">num_ventas</span>: { <span class="op">$sum</span>: <span class="num">1</span> }
+  }},
+  { <span class="op">$sort</span>: { <span class="key">total_ingresos</span>: <span class="op">-1</span> } }
+])</div>
+      <div class="result-label">Resultado</div>
+      <div class="result-box">{ _id:'Computo',    total_ingresos:85750000, num_ventas:31 }
+{ _id:'Accesorios', total_ingresos:12340000, num_ventas:38 }
+{ _id:'Oficina',    total_ingresos:9100000,  num_ventas:14 }
+{ _id:'Redes',      total_ingresos:2890000,  num_ventas:17 }</div>
+    </div>
+  </div>
+
+  <div class="section-title">Promediar valor de venta por producto</div>
+  <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">aggregate</span>([
+  { <span class="op">$group</span>: {
+      <span class="key">_id</span>: <span class="str">"$producto"</span>,
+      <span class="key">promedio_venta</span>: { <span class="op">$avg</span>: <span class="str">"$total"</span> },
+      <span class="key">total_vendido</span>: { <span class="op">$sum</span>: <span class="str">"$total"</span> }
+  }},
+  { <span class="op">$sort</span>: { <span class="key">promedio_venta</span>: <span class="op">-1</span> } }
+])</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ _id: 'Laptop',    promedio_venta: 6875000, total_vendido: 55000000 }
+{ _id: 'Monitor',   promedio_venta: 2400000, total_vendido: 19200000 }
+{ _id: 'Impresora', promedio_venta: 1950000, total_vendido: 9750000  }
+{ _id: 'Router',    promedio_venta:  660000, total_vendido: 2640000  }
+{ _id: 'Teclado',   promedio_venta:  300000, total_vendido: 3900000  }
+<span style="color:#639922">// ...</span></div>
+
+  <div class="section-title">Estadística completa por ciudad (máx, mín, promedio, suma)</div>
+  <div class="code-block">db.<span class="fn">ventas</span>.<span class="fn">aggregate</span>([
+  { <span class="op">$group</span>: {
+      <span class="key">_id</span>: <span class="str">"$ciudad"</span>,
+      <span class="key">total_ventas</span>:  { <span class="op">$sum</span>: <span class="num">1</span>            },
+      <span class="key">suma_ingresos</span>: { <span class="op">$sum</span>: <span class="str">"$total"</span>  },
+      <span class="key">promedio</span>:      { <span class="op">$avg</span>: <span class="str">"$total"</span>  },
+      <span class="key">venta_maxima</span>: { <span class="op">$max</span>: <span class="str">"$total"</span>  },
+      <span class="key">venta_minima</span>: { <span class="op">$min</span>: <span class="str">"$total"</span>  }
+  }},
+  { <span class="op">$sort</span>: { <span class="key">suma_ingresos</span>: <span class="op">-1</span> } }
+])</div>
+  <div class="result-label">Resultado</div>
+  <div class="result-box">{ _id:'Pereira',   total_ventas:28, suma_ingresos:31500000, promedio:1125000, venta_maxima:12500000, venta_minima:2500  }
+{ _id:'Medellín', total_ventas:26, suma_ingresos:29300000, promedio:1126923, venta_maxima:10000000, venta_minima:2500  }
+<span style="color:#639922">// ...</span></div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(7)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(9)">Siguiente →</button>
+  </div>
+</div>
+
+<!-- SLIDE 9: CONCLUSIONES -->
+<div class="slide" id="s9">
+  <div class="slide-header">
+    <div class="slide-label">Slide 9 de 9</div>
+    <div class="slide-title">Conclusiones</div>
+    <div class="slide-sub">Aprendizajes del uso de MongoDB en un entorno Big Data</div>
+    <div class="divider"></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px">
+    <div class="card" style="display:flex;gap:16px;align-items:flex-start">
+      <div style="background:#1F4E79;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">1</div>
+      <div><div style="font-weight:700;color:#1F4E79;margin-bottom:4px">Flexibilidad del modelo documental</div><div style="font-size:14px;color:#4a5568;line-height:1.7">MongoDB permite almacenar documentos sin un esquema rígido, lo cual es ideal para sistemas de ventas donde los productos pueden tener atributos variables según su categoría.</div></div>
+    </div>
+    <div class="card" style="display:flex;gap:16px;align-items:flex-start">
+      <div style="background:#2E75B6;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">2</div>
+      <div><div style="font-weight:700;color:#1F4E79;margin-bottom:4px">$lookup como alternativa al JOIN relacional</div><div style="font-size:14px;color:#4a5568;line-height:1.7">El operador $lookup permite combinar colecciones en MongoDB de forma equivalente a los JOIN de SQL, facilitando consultas enriquecidas que integran datos de ventas, clientes y productos en una sola operación.</div></div>
+    </div>
+    <div class="card" style="display:flex;gap:16px;align-items:flex-start">
+      <div style="background:#5BC0EB;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">3</div>
+      <div><div style="font-weight:700;color:#1F4E79;margin-bottom:4px">Potencia analítica del pipeline de agregación</div><div style="font-size:14px;color:#4a5568;line-height:1.7">El pipeline de agregación permite encadenar etapas $match, $group, $sort y $project para obtener estadísticas detalladas como sumas, promedios, máximos y mínimos, sin necesidad de herramientas externas.</div></div>
+    </div>
+    <div class="card" style="display:flex;gap:16px;align-items:flex-start">
+      <div style="background:#3B6D11;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">4</div>
+      <div><div style="font-weight:700;color:#1F4E79;margin-bottom:4px">CRUD intuitivo basado en documentos JSON</div><div style="font-size:14px;color:#4a5568;line-height:1.7">Las operaciones de inserción, selección, actualización y eliminación en MongoDB son intuitivas y eficientes, con una sintaxis JSON que facilita la manipulación de datos y reduce la curva de aprendizaje frente a SQL.</div></div>
+    </div>
+    <div class="card" style="display:flex;gap:16px;align-items:flex-start">
+      <div style="background:#854F0B;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0">5</div>
+      <div><div style="font-weight:700;color:#1F4E79;margin-bottom:4px">NoSQL como solución para entornos Big Data</div><div style="font-size:14px;color:#4a5568;line-height:1.7">Las bases de datos NoSQL como MongoDB son una solución adecuada para Big Data, donde el volumen, la velocidad y la variedad de los datos superan las capacidades de los sistemas relacionales tradicionales, ofreciendo escalado horizontal nativo.</div></div>
+    </div>
+  </div>
+
+  <div class="card card-blue" style="margin-top:24px;font-size:13px;color:#1F4E79;text-align:center">
+    <strong>Universidad Nacional Abierta y a Distancia (UNAD)</strong> &nbsp;·&nbsp; Curso Big Data 202016911 &nbsp;·&nbsp; Tarea 4 &nbsp;·&nbsp; Abril 2026
+  </div>
+
+  <div class="foot-nav">
+    <button class="foot-btn secondary" onclick="goTo(8)">← Anterior</button>
+    <button class="foot-btn" onclick="goTo(0)">Volver al inicio ↑</button>
+  </div>
+</div>
+
+<script>
+const TOTAL = 10;
+let current = 0;
+const slides = document.querySelectorAll('.slide');
+const navBtns = document.querySelectorAll('.nav-btn');
+const prog = document.getElementById('prog');
+
+function goTo(n) {
+  slides[current].classList.remove('active');
+  navBtns[current].classList.remove('active');
+  current = n;
+  slides[current].classList.add('active');
+  navBtns[current].classList.add('active');
+  prog.style.width = ((n + 1) / TOTAL * 100) + '%';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
